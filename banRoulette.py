@@ -1,4 +1,5 @@
 from random import randrange
+import sqlite3
 import telebot
 
 bot = telebot.TeleBot("1197680720:AAEpdcTDvhLD9NpYsz20jZ1zJRdwQxxvO3o")
@@ -7,6 +8,21 @@ members = []
 bannedOne = []
 print("Bot is started!")
 
+conn = sqlite3.connect("database.db", check_same_thread=False) # или :memory: чтобы сохранить в RAM
+cursor = conn.cursor()
+
+#Создание таблицы
+cursor.execute("""CREATE TABLE IF NOT EXISTS bannedUsers (
+                    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+                    userId        INTEGER,
+                    userName      STRING,
+                    userFirstName STRING,
+                    timesBanned   INTEGER,
+                    points        INTEGER,
+                    multiply      REAL
+                    );
+                """)
+conn.commit()
 
 @bot.message_handler(commands=['ihaveballs'])
 def add(message):
@@ -17,6 +33,13 @@ def add(message):
         membersId.append(message.from_user.id)
         members.append(str(message.from_user.first_name))
         print(str(message.from_user.id) + " " + str(message.from_user.username) + " " +  str(message.from_user.first_name))
+        membersId.append(str(message.from_user.id))
+        members.append(str(message.from_user.first_name))
+        print(str(message.from_user.id) + " " + str(message.from_user.username) + " " +  str(message.from_user.first_name))
+        if 1==1:
+            data = [(message.from_user.id,message.from_user.username,message.from_user.first_name,0,100,2.0)]
+            cursor.executemany("INSERT INTO bannedUsers(userId, userName, userFirstName, timesBanned, points, multiply) VALUES (?,?,?,?,?,?)", data)
+            conn.commit()
 
 
 @bot.message_handler(commands=['list'])
@@ -53,5 +76,6 @@ def booling(message):
     if len(bannedOne) != 0:
         if int(bannedOne[0]) == message.from_user.id:
             bot.delete_message(chat_id=message.chat.id, message_id=message.message_id)
+
 
 bot.polling()
