@@ -1,12 +1,13 @@
-from random import randrange
+from random import randrange, randint
 import sqlite3
 import telebot
 
-bot = telebot.TeleBot("1197680720:AAEpdcTDvhLD9NpYsz20jZ1zJRdwQxxvO3o")
+bot = telebot.TeleBot("")
 
 membersId = []
 members = []
-bannedOne = []
+
+bannedOne = None
 
 # TODO Исправить ошибку, которая появляется при комманде /nowbanned
 #      Постоянно висит значение "никто"
@@ -24,8 +25,7 @@ def createDb():
                       userId        INTEGER,
                       userFirstName STRING,
                       timesBanned   INTEGER,
-                      points        integer,
-                      multiply      REAL
+                      points        integer
                       );
                    """)
     conn.commit()
@@ -41,8 +41,8 @@ def add(message):
         bot.reply_to(message, message.from_user.first_name + ",ты уже участвуешь в бан рулетке! НЕЗАЕБУЙ!")
     else:
         bot.reply_to(message, message.from_user.first_name + " теперь участвует в бан рулетке!")
-        data = [(message.from_user.id,message.from_user.first_name,0,100,2.0)]
-        cursor.executemany("INSERT INTO bannedUsers(userId, userFirstName, timesBanned, points, multiply) VALUES (?,?,?,?,?)", data)
+        data = [(message.from_user.id,message.from_user.first_name,0,1000)]
+        cursor.executemany("INSERT INTO bannedUsers(userId, userFirstName, timesBanned, points) VALUES (?,?,?,?)", data)
         conn.commit()
 
 
@@ -68,34 +68,57 @@ def nowbanned(message):
     else:
         bot.send_message(message.chat.id, text="На данный момент никто не забанен")
 
+
 # Ban
 @bot.message_handler(commands=["ban"])
 def baned(message):
-    try: 
+
+
+    try:
         bot.restrict_chat_member(chat_id=message.chat.id, user_id=382353620, until_date=30, can_send_messages=False)
     except:
         getId = "SELECT userId FROM bannedUsers"
         getName = "SELECT userFirstName FROM bannedUsers WHERE userId=?"
+        getPoints = "SELECT points FROM bannedUsers WHERE userId=?"
         cursor.execute(getId)
         membersId = [row[0] for row in cursor.fetchall()]
         if len(membersId) != 0:
-            randomId = randrange(len(membersId))
-            bannedOne.append(membersId[randomId])
-            cursor.execute(getName, ([bannedOne[0]]))
-            user = [row[0] for row in cursor.fetchone()]
-            print(user)
-            banInfo = "Пользователь " + str(user) + " был забанен"
+            userIntervals = []
+            pastPoints = 0
+            for id in membersId:
+
+                cursor.execute(getPoints, ([id]))
+                points = [row[0] for row in cursor.fetchall()]
+                userIntervals.append([id,pastPoints, pastPoints + int(points[0])])
+                pastPoints += int(points[0])
+            randomNumber = randint(0, pastPoints)
+
+            for i in range(len(userIntervals)):
+                if int(userIntervals[i][1]) <= randomNumber and randomNumber < int(userIntervals[i][2]):
+                    global bannedOne
+                    bannedOne = int(userIntervals[i][0])
+
+
+
+
+
+
+            cursor.execute(getName, ([bannedOne]))
+            user = [row for row in cursor.fetchone()]
+            print(user[0])
+            banInfo = "Пользователь " + str(user[0]) + " был забанен"
             bot.send_message(message.chat.id, text=banInfo)
-            print(f"user {bannedOne[0]} was banned")
+            print(f"user {bannedOne} was banned")
         else:
             bot.send_message(message.chat.id, text="Ни один участник не был зарегестрирован")
-        
+
 
 # delete
 @bot.message_handler(content_types=['sticker' ,'text' ,'audio', 'voice', 'video', 'animation', 'videoNote'])
 def booling(message):
-    if len(bannedOne) != 0:
-        if bannedOne[0] == message.from_user.id:
+
+    if bannedOne != None:
+        if bannedOne == message.from_user.id:
             bot.delete_message(chat_id=message.chat.id, message_id=message.message_id)
 
 
