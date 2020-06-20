@@ -8,9 +8,6 @@ membersId = []
 members = []
 
 bannedOne = None
-
-# TODO Исправить ошибку, которая появляется при комманде /nowbanned
-#      Постоянно висит значение "никто"
 banName = "никто"
 
 print("Bot is started!")
@@ -37,6 +34,7 @@ def add(message):
     sql = "SELECT userId FROM bannedUsers"
     cursor.execute(sql)
     membersId = [row[0] for row in cursor.fetchall()]
+
     if message.from_user.id in membersId:
         bot.reply_to(message, message.from_user.first_name + ",ты уже участвуешь в бан рулетке! НЕЗАЕБУЙ!")
     else:
@@ -52,17 +50,18 @@ def list(message):
     listOfMembers = "Список участвующих: \n"
     sql = "SELECT userFirstName FROM bannedUsers"
     cursor.execute(sql)
-    # Именно так надо брать данные с бд, чтоб запятых не было
     members = [row[0] for row in cursor.fetchall()]
+    
     for i in range(len(members)):
         listOfMembers = listOfMembers + str(i+1) + ". " + str(members[i]) + "\n"
+
     bot.send_message(message.chat.id, listOfMembers)
 
 
 # Show who is banned
 @bot.message_handler(commands=['nowbanned'])
 def nowbanned(message):
-    if len(bannedOne) != 0:
+    if bannedOne != None:
         now = "Пользователь " + str(banName) + " сейчас в бане"
         bot.send_message(message.chat.id, text=now)
     else:
@@ -72,8 +71,6 @@ def nowbanned(message):
 # Ban
 @bot.message_handler(commands=["ban"])
 def baned(message):
-
-
     try:
         bot.restrict_chat_member(chat_id=message.chat.id, user_id=382353620, until_date=30, can_send_messages=False)
     except:
@@ -82,11 +79,12 @@ def baned(message):
         getPoints = "SELECT points FROM bannedUsers WHERE userId=?"
         cursor.execute(getId)
         membersId = [row[0] for row in cursor.fetchall()]
+
         if len(membersId) != 0:
             userIntervals = []
             pastPoints = 0
-            for id in membersId:
 
+            for id in membersId:
                 cursor.execute(getPoints, ([id]))
                 points = [row[0] for row in cursor.fetchall()]
                 userIntervals.append([id,pastPoints, pastPoints + int(points[0])])
@@ -98,14 +96,11 @@ def baned(message):
                     global bannedOne
                     bannedOne = int(userIntervals[i][0])
 
-
-
-
-
-
             cursor.execute(getName, ([bannedOne]))
             user = [row for row in cursor.fetchone()]
             print(user[0])
+            global banName
+            banName = user[0]
             banInfo = "Пользователь " + str(user[0]) + " был забанен"
             bot.send_message(message.chat.id, text=banInfo)
             print(f"user {bannedOne} was banned")
@@ -116,7 +111,6 @@ def baned(message):
 # delete
 @bot.message_handler(content_types=['sticker' ,'text' ,'audio', 'voice', 'video', 'animation', 'videoNote'])
 def booling(message):
-
     if bannedOne != None:
         if bannedOne == message.from_user.id:
             bot.delete_message(chat_id=message.chat.id, message_id=message.message_id)
