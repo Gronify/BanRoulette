@@ -3,7 +3,8 @@ import time
 import sqlite3
 import telebot
 
-bot = telebot.TeleBot("1197680720:AAEpdcTDvhLD9NpYsz20jZ1zJRdwQxxvO3o")
+
+bot = telebot.TeleBot("")
 
 membersId = []
 members = []
@@ -18,6 +19,7 @@ print("Bot is started!")
 
 conn = sqlite3.connect("database.db", check_same_thread=False)
 cursor = conn.cursor()
+
 
 # Create Table
 def createDb():
@@ -73,51 +75,74 @@ def nowbanned(message):
 
 
 # Ban
-@bot.message_handler(commands=["ban"])
+@bot.message_handler(commands=['ban'])
 def baned(message):
     if not isDay:
         if not isBan:
-            try:
-                bot.restrict_chat_member(chat_id=message.chat.id, user_id=382353620, until_date=30, can_send_messages=False)
-            except:
-                getId = "SELECT userId FROM bannedUsers"
-                getName = "SELECT userFirstName FROM bannedUsers WHERE userId=?"
-                getPoints = "SELECT points FROM bannedUsers WHERE userId=?"
-                cursor.execute(getId)
-                membersId = [row[0] for row in cursor.fetchall()]
+            getId = "SELECT userId FROM bannedUsers"
+            getName = "SELECT userFirstName FROM bannedUsers WHERE userId=?"
+            getPoints = "SELECT points FROM bannedUsers WHERE userId=?"
+            getTimes = "SELECT timesBanned FROM bannedUsers WHERE userId=?"
+            cursor.execute(getId)
+            membersId = [row[0] for row in cursor.fetchall()]
 
-                if len(membersId) != 0:
-                    userIntervals = []
-                    pastPoints = 0
+            if len(membersId) != 0:
+                userIntervals = []
+                pastPoints = 0
 
-                    for id in membersId:
-                        cursor.execute(getPoints, ([id]))
-                        points = [row[0] for row in cursor.fetchall()]
-                        userIntervals.append([id,pastPoints, pastPoints + int(points[0])])
-                        print(userIntervals)
-                        pastPoints += int(points[0])
-                    randomNumber = randint(0, pastPoints)
+                for id in membersId:
+                    cursor.execute(getPoints, ([id]))
+                    points = [row[0] for row in cursor.fetchall()]
+                    userIntervals.append([id,pastPoints, pastPoints + int(points[0])])
+                    print(userIntervals)
+                    pastPoints += int(points[0])
+                randomNumber = randint(0, pastPoints)
 
-                    for i in range(len(userIntervals)):
-                        if int(userIntervals[i][1]) <= randomNumber and randomNumber < int(userIntervals[i][2]):
-                            global bannedOne
-                            bannedOne = int(userIntervals[i][0])
+                for i in range(len(userIntervals)):
+                    if int(userIntervals[i][1]) <= randomNumber and randomNumber < int(userIntervals[i][2]):
+                        global bannedOne
+                        bannedOne = int(userIntervals[i][0])
 
-                    cursor.execute(getName, ([bannedOne]))
-                    user = [row for row in cursor.fetchone()]
-                    global banName
-                    banName = user[0]
-                    banInfo = "Пользователь " + str(user[0]) + " был забанен"
-                    bot.send_message(message.chat.id, text=banInfo)
-                else:
-                    bot.send_message(message.chat.id, text="Ни один участник не был зарегестрирован")
-                banTimer()
-                dayTimer()
+                cursor.execute(getName, ([bannedOne]))
+                user = [row for row in cursor.fetchone()]
+                global banName
+                banName = user[0]
+                banInfo = "Пользователь " + str(user[0]) + " был забанен"
+                bot.send_message(message.chat.id, text=banInfo)
+
+                cursor.execute(getTimes, ([bannedOne]))
+                times = [row for row in cursor.fetchone()]
+                newT = times[0] + 1
+                times.append(newT)
+                data = [(times[1], bannedOne)]
+                sql = "UPDATE bannedUsers SET timesBanned=? WHERE userId=?"
+                cursor.executemany(sql, data)
+                conn.commit()
+            else:
+                bot.send_message(message.chat.id, text="Ни один участник не был зарегестрирован")
+            banTimer()
+            dayTimer()
         else:
             now = "На данный момент пользователь " + str(banName) + " уже в бане"
             bot.send_message(message.chat.id, text=now)
     else:
         bot.send_message(message.chat.id, text="Сегодня уже был кто-то забанен")
+
+
+@bot.message_handler(commands=['stat'])
+def stat(message):
+    banned = "SELECT timesBanned FROM bannedUsers"
+    users = "SELECT userFirstName FROM bannedUsers"
+    cursor.execute(banned)
+    times = [row[0] for row in cursor.fetchall()]
+    cursor.execute(users)
+    us = [row[0] for row in cursor.fetchall()]
+    staistics = "Статистика банов: \n"
+    for i in range(len(us)):
+        staistics = staistics + str(us[i]) + " - " +str(times[i]) + "\n"
+
+    bot.send_message(message.chat.id, text=staistics)
+
 
 # delete
 @bot.message_handler(content_types=['sticker' ,'text' ,'audio', 'voice', 'video', 'animation', 'videoNote'])
@@ -141,7 +166,7 @@ def banTimer():
     isBan = False
     
 
-# 24h tomer(now last only for 10 sec)
+# 24h timer(now last only for 10 sec)
 def dayTimer():
     global isDay
     t = 5
