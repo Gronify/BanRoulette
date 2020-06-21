@@ -54,7 +54,7 @@ def list(message):
     sql = "SELECT userFirstName FROM bannedUsers"
     cursor.execute(sql)
     members = [row[0] for row in cursor.fetchall()]
-    
+
     for i in range(len(members)):
         listOfMembers = listOfMembers + str(i+1) + ". " + str(members[i]) + "\n"
 
@@ -115,8 +115,11 @@ def baned(message):
                     times = [row for row in cursor.fetchone()]
                     newT = times[0] + 1
                     times.append(newT)
-                    data = [(times[1], bannedOne)]
-                    sql = "UPDATE bannedUsers SET timesBanned=? WHERE userId=?"
+                    cursor.execute(getPoints, ([bannedOne]))
+                    points = [row[0] for row in cursor.fetchall()]
+                    newP = points[0] + randint(-100, 150)
+                    data = [(times[1], newP, bannedOne)]
+                    sql = "UPDATE bannedUsers SET timesBanned=?, points=? WHERE userId=?"
                     cursor.executemany(sql, data)
                     conn.commit()
 
@@ -129,7 +132,7 @@ def baned(message):
                         bannedOne = None
                     except:
                         print("Пользователь является админом чата")
-                    
+
                     banTimer(randomTime)
                     dayTimer()
                 else:
@@ -186,7 +189,7 @@ def drop(message):
 
 
 # delete
-@bot.message_handler(content_types=['sticker' ,'text' ,'audio', 'voice', 'video', 'document', 'videoNote'])
+@bot.message_handler(content_types=['audio', 'location', 'contact', 'sticker' ,'text' , 'voice', 'video', 'document', 'video_note'])
 def booling(message):
     if bannedOne != None:
         if bannedOne == message.from_user.id:
@@ -201,12 +204,12 @@ def banTimer(randomTime):
     isBan = True
     while t > 0:
         t -= 1
-        print(t) 
+        print(t)
         time.sleep(1)
     banName = "никто"
     bannedOne = None
     isBan = False
-    
+
 
 # 24h timer(now last only for 10 sec)
 def dayTimer():
