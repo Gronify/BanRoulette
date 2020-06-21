@@ -110,8 +110,6 @@ def baned(message):
                     user = [row for row in cursor.fetchone()]
                     global banName
                     banName = user[0]
-                    banInfo = "Пользователь " + str(user[0]) + " был забанен"
-                    bot.send_message(message.chat.id, text=banInfo)
 
                     cursor.execute(getTimes, ([bannedOne]))
                     times = [row for row in cursor.fetchone()]
@@ -121,8 +119,17 @@ def baned(message):
                     sql = "UPDATE bannedUsers SET timesBanned=? WHERE userId=?"
                     cursor.executemany(sql, data)
                     conn.commit()
-                    
+
                     randomTime = randint(100, 1800) # банит от 100 секунд до 30 минут(юзать на проде)
+                    banInfo = "Пользователь " + str(user[0]) + " был забанен на " + str(randomTime) + " секунд"
+                    bot.send_message(message.chat.id, text=banInfo)
+                    try:
+                        day = message.date + randomTime
+                        bot.restrict_chat_member(message.chat.id, bannedOne, until_date=day, can_send_messages=False)
+                        bannedOne = None
+                    except:
+                        print("Пользователь является админом чата")
+                    
                     banTimer(randomTime)
                     dayTimer()
                 else:
