@@ -121,7 +121,9 @@ def baned(message):
                     sql = "UPDATE bannedUsers SET timesBanned=? WHERE userId=?"
                     cursor.executemany(sql, data)
                     conn.commit()
-                    banTimer()
+                    
+                    randomTime = randint(100, 1800) # банит от 100 секунд до 30 минут(юзать на проде)
+                    banTimer(randomTime)
                     dayTimer()
                 else:
                     bot.send_message(message.chat.id, text="Ни один участник не был зарегестрирован")
@@ -132,6 +134,7 @@ def baned(message):
         bot.send_message(message.chat.id, text="Сегодня уже был кто-то забанен")
 
 
+# Shows staistics
 @bot.message_handler(commands=['stat'])
 def stat(message):
     banned = "SELECT timesBanned FROM bannedUsers"
@@ -147,6 +150,7 @@ def stat(message):
     bot.send_message(message.chat.id, text=staistics)
 
 
+# Unreg users
 @bot.message_handler(commands=['unregister'])
 def unregister(message):
     cursor.execute("SELECT userFirstName FROM bannedUsers WHERE userId=?", (str(message.from_user.id),))
@@ -162,6 +166,18 @@ def unregister(message):
         bot.send_message(message.chat.id, text=m)
 
 
+# drop timesBanned
+@bot.message_handler(commands=['drop'])
+def drop(message):
+    if message.from_user.id == 382353620 or message.from_user.id == 973532944:
+        sql = "UPDATE bannedUsers SET timesBanned=0"
+        cursor.execute(sql)
+        conn.commit()
+        bot.send_message(message.chat.id, text="Статистика была сброшена")
+    else:
+        bot.send_message(message.chat.id, text="Вы не можете использовать эту комманду")
+
+
 # delete
 @bot.message_handler(content_types=['sticker' ,'text' ,'audio', 'voice', 'video', 'document', 'videoNote'])
 def booling(message):
@@ -171,9 +187,10 @@ def booling(message):
 
 
 # timer for ban(now last only for 10 sec, later I will add random)
-def banTimer():
+def banTimer(randomTime):
     global banName, bannedOne, isBan
-    t = 10
+    #t = randomTime # прод
+    t = 10 # банит на 10 сек, сделано для разработки
     isBan = True
     while t > 0:
         t -= 1
@@ -187,7 +204,8 @@ def banTimer():
 # 24h timer(now last only for 10 sec)
 def dayTimer():
     global isDay
-    t = 5
+    #t = 7200 # банить можно только раз в 2 часа использовать это для прода
+    t = 5 # банить можно раз в 5 секунд, для разработки сделано
     isDay = True
     while t > 0:
         t -= 1
