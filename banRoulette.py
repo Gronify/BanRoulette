@@ -144,8 +144,23 @@ def stat(message):
     bot.send_message(message.chat.id, text=staistics)
 
 
+@bot.message_handler(commands=['unregister'])
+def unregister(message):
+    cursor.execute("SELECT userFirstName FROM bannedUsers WHERE userId=?", (str(message.from_user.id),))
+    data = cursor.fetchall()
+    if len(data)==0:
+        err = "Пользователь " + str(message.from_user.first_name) + " не был зарегестрирован в игре"
+        bot.send_message(message.chat.id, err)
+    else:
+        sql = "DELETE FROM bannedUsers WHERE userId=?"
+        cursor.execute(sql, [(message.from_user.id)])
+        conn.commit()
+        m = "Пользователь " + str(message.from_user.first_name) + " вышел из игры"
+        bot.send_message(message.chat.id, text=m)
+
+
 # delete
-@bot.message_handler(content_types=['sticker' ,'text' ,'audio', 'voice', 'video', 'animation', 'videoNote'])
+@bot.message_handler(content_types=['sticker' ,'text' ,'audio', 'voice', 'video', 'document', 'videoNote'])
 def booling(message):
     if bannedOne != None:
         if bannedOne == message.from_user.id:
